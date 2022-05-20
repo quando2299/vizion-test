@@ -14,7 +14,7 @@ namespace Vizion.Controllers
     {
         private readonly IApplicantService _applicantService;
         private readonly IBlobService _blobService;
-        private readonly string[] _supportedTypes = new[] { "txt", "doc", "docx", "pdf", "xls", "xlsx" };
+        private readonly string[] _supportedTypes = new[] { "doc", "docx", "pdf" };
 
         public ApplicantController(
             IApplicantService applicantService,
@@ -46,7 +46,7 @@ namespace Vizion.Controllers
         }
 
         [HttpPost]
-        public async Task<object> Create(CreateApplicantInput model)
+        public async Task<object> Create([FromForm]CreateApplicantInput model)
         {
             var entity = model.MapToEntity();
 
@@ -61,10 +61,10 @@ namespace Vizion.Controllers
 
             if (file != null && _supportedTypes.Contains(System.IO.Path.GetExtension(file.FileName).Substring(1)))
             {
-                var result = await this._blobService.UploadFileBlobAsync($"applicants/{entity.Id}", 
+                var result = await this._blobService.UploadFileBlobAsync($"applicants", 
                     file.OpenReadStream(),
                     file.ContentType,
-                    file.FileName);
+                    $"{entity.Id}" + file.FileName);
 
                 entity.ResumeUrl = result.AbsoluteUri;
             }
@@ -90,11 +90,14 @@ namespace Vizion.Controllers
 
             if (file != null && _supportedTypes.Contains(System.IO.Path.GetExtension(file.FileName).Substring(1)))
             {
-                await this._blobService.DeleteBlobFile($"applicants/{entity.Id}", Path.GetFileName(entity.ResumeUrl));
-                var result = await this._blobService.UploadFileBlobAsync($"applicants/{entity.Id}", 
+                if (!string.IsNullOrWhiteSpace(entity.ResumeUrl))
+                {
+                    await this._blobService.DeleteBlobFile($"applicants", $"{entity.Id}" + Path.GetFileName(entity.ResumeUrl));
+                }
+                var result = await this._blobService.UploadFileBlobAsync($"applicants", 
                     file.OpenReadStream(),
                     file.ContentType,
-                    file.FileName);
+                    $"{entity.Id}" + file.FileName);
 
                 entity.ResumeUrl = result.AbsoluteUri;
             }
